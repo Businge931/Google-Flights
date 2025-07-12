@@ -10,12 +10,24 @@ import theme from "./theme";
 import { SearchForm, Header, FlightResults } from "./components";
 import { NotificationProvider } from "./context/NotificationProvider";
 import { FlightProvider } from "./context/FlightProvider";
+import { HotelProvider } from "./context/HotelContext";
 import { useFlightContext } from "./context/useFlightContext";
 import { LocalizationProvider } from "./context/LocalizationContext";
+import { NavigationProvider } from "./context/NavigationContext";
+import useNavigation from "./hooks/useNavigation";
 import { useTranslation } from "react-i18next";
 import type { FlightResult } from "./types/flight";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 import FlightDetails from "./components/features/flightDetails/FlightDetails/FlightDetails";
+import HotelSearch from "./components/features/hotels/HotelSearch/HotelSearch";
+import CarRentalSearch from "./components/features/cars/CarRentalSearch/CarRentalSearch";
+import HotelDetails from "./components/features/hotels/HotelDetails";
 
 function FlightResultsContainer() {
   const {
@@ -50,10 +62,29 @@ function FlightResultsContainer() {
   );
 }
 
-// HomePage component for the main search page
-function HomePage() {
+function MainContent() {
+  const { activeTab } = useNavigation();
+
+  switch (activeTab) {
+    case "flights":
+      return <FlightsTabContent />;
+    case "hotels":
+      return (
+        <HotelProvider>
+          <HotelSearch />
+        </HotelProvider>
+      );
+    case "cars":
+      return <CarRentalSearch />;
+    default:
+      return <FlightsTabContent />;
+  }
+}
+
+// Original flights content
+function FlightsTabContent() {
   const { t } = useTranslation();
-  
+
   return (
     <>
       {/* Blue hero section with heading */}
@@ -61,6 +92,7 @@ function HomePage() {
         sx={{
           width: "100%",
           backgroundColor: "primary.main",
+          // backgroundColor: "#05203c",
           color: "white",
           pt: 4,
           pb: 6,
@@ -77,16 +109,10 @@ function HomePage() {
           gutterBottom
           sx={{ fontWeight: "bold", mb: 1 }}
         >
-          {t(
-            "searchForm.findYourPerfectFlight",
-            "Find your perfect flight"
-          )}
+          {t("searchForm.findYourPerfectFlight", "Find your perfect flight")}
         </Typography>
 
-        <Typography
-          variant="body1"
-          sx={{ maxWidth: 600, mb: 4, px: 2 }}
-        >
+        <Typography variant="body1" sx={{ maxWidth: 600, mb: 4, px: 2 }}>
           {t(
             "searchForm.searchCompareFlights",
             "Search and compare flights from hundreds of airlines and travel sites to find the best deals for your next trip."
@@ -128,29 +154,38 @@ function App() {
   return (
     <Router>
       <LocalizationProvider>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <NotificationProvider>
-            <FlightProvider>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  height: "100vh",
-                  width: "100vw",
-                  overflow: "auto",
-                }}
-              >
-                <Header />
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/flight/:flightId" element={<FlightDetails />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Box>
-            </FlightProvider>
-          </NotificationProvider>
-        </ThemeProvider>
+        <NavigationProvider>
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <NotificationProvider>
+              <FlightProvider>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100vh",
+                    width: "100vw",
+                    overflow: "auto",
+                  }}
+                >
+                  <Header />
+                  <Routes>
+                    <Route path="/" element={<MainContent />} />
+                    <Route
+                      path="/flight/:flightId"
+                      element={<FlightDetails />}
+                    />
+                    <Route
+                      path="/hotel/:hotelId/:hotelName"
+                      element={<HotelDetails />}
+                    />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Box>
+              </FlightProvider>
+            </NotificationProvider>
+          </ThemeProvider>
+        </NavigationProvider>
       </LocalizationProvider>
     </Router>
   );
