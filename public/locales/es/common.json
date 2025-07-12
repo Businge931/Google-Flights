@@ -1,0 +1,70 @@
+{
+  "header": {
+    "title": "Journey Vista Vuelos",
+    "home": "Inicio",
+    "myTrips": "Mis Viajes",
+    "help": "Ayuda"
+  },
+  "regionalSettings": {
+    "title": "Configuración regional",
+    "language": "Idioma",
+    "country": "País / Región",
+    "countryHelperText": "Seleccionar tu país te dará ofertas e información local.",
+    "currency": "Moneda",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
+  "searchForm": {
+    "from": "Origen",
+    "to": "Destino",
+    "departure": "Salida",
+    "return": "Regreso",
+    "passengers": "Pasajeros",
+    "search": "Buscar",
+    "nearby": "¿Aeropuertos cercanos?",
+    "oneWay": "Solo ida",
+    "roundTrip": "Ida y vuelta",
+    "adults": "Adultos",
+    "children": "Niños (2-12 años)",
+    "infants": "Bebés (menos de 2 años)"
+  },
+  "flightResults": {
+    "noResults": "No se encontraron vuelos. Intenta con otros criterios de búsqueda.",
+    "sort": "Ordenar por",
+    "sortOptions": {
+      "best": "Mejor opción",
+      "price_low": "Precio (más bajo)",
+      "price_high": "Precio (más alto)",
+      "fastest": "Más rápido",
+      "outbound_take_off_time": "Hora de salida (más temprano)",
+      "outbound_landing_time": "Hora de llegada (más temprano)",
+      "return_take_off_time": "Salida de regreso (más temprano)",
+      "return_landing_time": "Llegada de regreso (más temprano)"
+    }
+  },
+  "flightFilters": {
+    "filters": "Filtros",
+    "stops": "Escalas",
+    "price": "Precio",
+    "duration": "Duración",
+    "departureTime": "Hora de salida",
+    "arrivalTime": "Hora de llegada",
+    "airlines": "Aerolíneas",
+    "refundable": "Reembolsable",
+    "nonstop": "Sin escalas",
+    "oneStop": "1 escala",
+    "twoOrMoreStops": "2+ escalas",
+    "any": "Cualquiera",
+    "min": "Mín",
+    "max": "Máx",
+    "apply": "Aplicar",
+    "reset": "Restablecer filtros"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "invalidDate": "Fecha inválida",
+    "dateBeforeToday": "La fecha no puede ser anterior a hoy",
+    "returnDateBeforeDeparture": "La fecha de regreso debe ser posterior a la fecha de salida",
+    "returnDateRequired": "La fecha de regreso es obligatoria para viajes de ida y vuelta"
+  }
+}

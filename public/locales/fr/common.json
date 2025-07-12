@@ -1,0 +1,70 @@
+{
+  "header": {
+    "title": "Vols Journey Vista",
+    "home": "Accueil",
+    "myTrips": "Mes Voyages",
+    "help": "Aide"
+  },
+  "regionalSettings": {
+    "title": "Paramètres régionaux",
+    "language": "Langue",
+    "country": "Pays / Région",
+    "countryHelperText": "La sélection de votre pays vous permettra d'obtenir des offres et des informations locales.",
+    "currency": "Devise",
+    "cancel": "Annuler",
+    "save": "Enregistrer"
+  },
+  "searchForm": {
+    "from": "De",
+    "to": "Vers",
+    "departure": "Départ",
+    "return": "Retour",
+    "passengers": "Passagers",
+    "search": "Rechercher",
+    "nearby": "Aéroports à proximité ?",
+    "oneWay": "Aller simple",
+    "roundTrip": "Aller-retour",
+    "adults": "Adultes",
+    "children": "Enfants (2-12 ans)",
+    "infants": "Bébés (moins de 2 ans)"
+  },
+  "flightResults": {
+    "noResults": "Aucun vol trouvé. Veuillez essayer d'autres critères de recherche.",
+    "sort": "Trier par",
+    "sortOptions": {
+      "best": "Meilleur",
+      "price_low": "Prix (le plus bas)",
+      "price_high": "Prix (le plus élevé)",
+      "fastest": "Le plus rapide",
+      "outbound_take_off_time": "Heure de départ (la plus tôt)",
+      "outbound_landing_time": "Heure d'arrivée (la plus tôt)",
+      "return_take_off_time": "Départ retour (le plus tôt)",
+      "return_landing_time": "Arrivée retour (la plus tôt)"
+    }
+  },
+  "flightFilters": {
+    "filters": "Filtres",
+    "stops": "Escales",
+    "price": "Prix",
+    "duration": "Durée",
+    "departureTime": "Heure de départ",
+    "arrivalTime": "Heure d'arrivée",
+    "airlines": "Compagnies aériennes",
+    "refundable": "Remboursable",
+    "nonstop": "Sans escale",
+    "oneStop": "1 escale",
+    "twoOrMoreStops": "2+ escales",
+    "any": "Tous",
+    "min": "Min",
+    "max": "Max",
+    "apply": "Appliquer",
+    "reset": "Réinitialiser les filtres"
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "invalidDate": "Date invalide",
+    "dateBeforeToday": "La date ne peut pas être antérieure à aujourd'hui",
+    "returnDateBeforeDeparture": "La date de retour doit être postérieure à la date de départ",
+    "returnDateRequired": "La date de retour est requise pour les allers-retours"
+  }
+}

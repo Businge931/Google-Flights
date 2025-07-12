@@ -1,0 +1,70 @@
+{
+  "header": {
+    "title": "Journey Vista Flights",
+    "home": "Home",
+    "myTrips": "My Trips",
+    "help": "Help"
+  },
+  "regionalSettings": {
+    "title": "Regional settings",
+    "language": "Language",
+    "country": "Country / Region",
+    "countryHelperText": "Selecting the country you're in will give you local deals and information.",
+    "currency": "Currency",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "searchForm": {
+    "from": "From",
+    "to": "To",
+    "departure": "Departure",
+    "return": "Return",
+    "passengers": "Passengers",
+    "search": "Search",
+    "nearby": "Want Nearby airports?",
+    "oneWay": "One way",
+    "roundTrip": "Round trip",
+    "adults": "Adults",
+    "children": "Children (2-12 years)",
+    "infants": "Infants (under 2 years)"
+  },
+  "flightResults": {
+    "noResults": "No flights found. Please try different search criteria.",
+    "sort": "Sort by",
+    "sortOptions": {
+      "best": "Best",
+      "price_low": "Price (lowest)",
+      "price_high": "Price (highest)",
+      "fastest": "Fastest",
+      "outbound_take_off_time": "Departure time (earliest)",
+      "outbound_landing_time": "Arrival time (earliest)",
+      "return_take_off_time": "Return departure (earliest)",
+      "return_landing_time": "Return arrival (earliest)"
+    }
+  },
+  "flightFilters": {
+    "filters": "Filters",
+    "stops": "Stops",
+    "price": "Price",
+    "duration": "Duration",
+    "departureTime": "Departure time",
+    "arrivalTime": "Arrival time",
+    "airlines": "Airlines",
+    "refundable": "Refundable",
+    "nonstop": "Nonstop",
+    "oneStop": "1 stop",
+    "twoOrMoreStops": "2+ stops",
+    "any": "Any",
+    "min": "Min",
+    "max": "Max",
+    "apply": "Apply",
+    "reset": "Reset filters"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidDate": "Invalid date",
+    "dateBeforeToday": "Date cannot be before today",
+    "returnDateBeforeDeparture": "Return date must be after departure date",
+    "returnDateRequired": "Return date is required for round trips"
+  }
+}
