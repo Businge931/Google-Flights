@@ -70,7 +70,10 @@ export const FlightProvider: React.FC<FlightProviderProps> = ({ children }) => {
           searchResults: results,
           loading: false,
           error: undefined,
-          sessionId: response.data.flightsSessionId || response.data.context?.sessionId || null,
+          sessionId:
+            response.data.flightsSessionId ||
+            response.data.context?.sessionId ||
+            null,
         }));
 
         showNotification(`${results.length} flights found!`, "success");
@@ -125,25 +128,26 @@ export const FlightProvider: React.FC<FlightProviderProps> = ({ children }) => {
         flightDetailsLoading: true,
         flightDetailsError: null,
       }));
-      
+
       // Try to find flight in search results if available
       const flight = state.searchResults?.find((f) => f.id === flightId);
-      
+
       // If we don't have search results or sessionId, we can't make the API call
       if (!state.searchResults || !state.sessionId) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           flightDetailsLoading: false,
-          flightDetailsError: "No active search session. Please return to search page."
+          flightDetailsError:
+            "If you are seeing this error, it means the get-flight-details endpoint is down again!!",
         }));
         return;
       }
-      
+
       if (!flight) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           flightDetailsLoading: false,
-          flightDetailsError: "Flight not found in current search results."
+          flightDetailsError: "Flight not found in current search results.",
         }));
         return;
       }
@@ -185,28 +189,36 @@ export const FlightProvider: React.FC<FlightProviderProps> = ({ children }) => {
         showNotification("Flight details loaded successfully", "success");
       } catch (error: unknown) {
         console.error("Error loading flight details:", error);
-        
+
         // Extract the actual error message from the API response if available
         let errorMessage = "Failed to load flight details. Please try again.";
-        
+
         // Type narrowing for different error structures
-        if (error && typeof error === 'object') {
+        if (error && typeof error === "object") {
           // Check for Axios-style error response
-          if ('response' in error && 
-              error.response && 
-              typeof error.response === 'object' && 
-              'data' in error.response) {
+          if (
+            "response" in error &&
+            error.response &&
+            typeof error.response === "object" &&
+            "data" in error.response
+          ) {
             const responseData = error.response.data;
-            if (typeof responseData === 'object' && responseData) {
-              if ('message' in responseData && typeof responseData.message === 'string') {
+            if (typeof responseData === "object" && responseData) {
+              if (
+                "message" in responseData &&
+                typeof responseData.message === "string"
+              ) {
                 errorMessage = responseData.message;
-              } else if ('error' in responseData && typeof responseData.error === 'string') {
+              } else if (
+                "error" in responseData &&
+                typeof responseData.error === "string"
+              ) {
                 errorMessage = responseData.error;
               }
             }
           }
           // Check for standard Error object
-          else if ('message' in error && typeof error.message === 'string') {
+          else if ("message" in error && typeof error.message === "string") {
             errorMessage = error.message;
           }
         }

@@ -12,6 +12,8 @@ import {
   AccordionSummary,
   AccordionDetails,
   Chip,
+  Radio,
+  RadioGroup,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import WifiIcon from "@mui/icons-material/Wifi";
@@ -22,9 +24,14 @@ import RestaurantIcon from "@mui/icons-material/Restaurant";
 import PetsIcon from "@mui/icons-material/Pets";
 import AcUnitIcon from "@mui/icons-material/AcUnit";
 import SpaIcon from "@mui/icons-material/Spa";
+import PercentIcon from "@mui/icons-material/Percent";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import PublicIcon from "@mui/icons-material/Public";
+import PersonIcon from "@mui/icons-material/Person";
+import StorefrontIcon from "@mui/icons-material/Storefront";
 import { useTranslation } from "react-i18next";
 
-// Define filter options and their types
 export interface HotelFilters {
   price: [number, number];
   reviewScore: number;
@@ -32,7 +39,12 @@ export interface HotelFilters {
   discounts: string[];
   amenities: string[];
   accommodationType: string[];
-  popularWith: string[];
+  distanceFromCenter: number | null; // in miles
+  minDiscountPercentage: number;
+  offerPartners: string[];
+  taxPolicy: string[];
+  guestType: string | null;
+  confidenceScore: number | null;
 }
 
 interface HotelFiltersProps {
@@ -40,6 +52,9 @@ interface HotelFiltersProps {
   onChange: (filters: HotelFilters) => void;
   minPrice?: number;
   maxPrice?: number;
+  availablePartners?: string[];
+  maxDistanceFromCenter?: number;
+  maxConfidenceScore?: number;
 }
 
 const HotelFilters: React.FC<HotelFiltersProps> = ({
@@ -47,6 +62,9 @@ const HotelFilters: React.FC<HotelFiltersProps> = ({
   onChange,
   minPrice = 0,
   maxPrice = 2000,
+  availablePartners = ["Expedia", "Hotels.com", "Booking.com"],
+  maxDistanceFromCenter = 10,
+  maxConfidenceScore = 5,
 }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState<string | false>("price");
@@ -97,7 +115,36 @@ const HotelFilters: React.FC<HotelFiltersProps> = ({
     onChange({ ...filters, stars: currentStars });
   };
 
-  // Handle checkbox filters (discounts, amenities, accommodation type, popular with)
+  // Handle distance change
+  const handleDistanceChange = (_event: Event, newValue: number | number[]) => {
+    onChange({ ...filters, distanceFromCenter: newValue as number });
+  };
+
+  // Handle discount percentage change
+  const handleDiscountPercentageChange = (
+    _event: Event,
+    newValue: number | number[]
+  ) => {
+    onChange({ ...filters, minDiscountPercentage: newValue as number });
+  };
+
+  // Handle confidence score change
+  const handleConfidenceScoreChange = (
+    _event: Event,
+    newValue: number | number[]
+  ) => {
+    onChange({ ...filters, confidenceScore: newValue as number });
+  };
+
+  // Handle radio button change
+  const handleRadioChange = (
+    category: "guestType",
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    onChange({ ...filters, [category]: event.target.value });
+  };
+
+  // Handle checkbox filters (discounts, amenities, accommodation type, tax policies, etc.)
   const handleCheckboxChange = (
     category: keyof HotelFilters,
     value: string
@@ -105,7 +152,11 @@ const HotelFilters: React.FC<HotelFiltersProps> = ({
     if (
       category === "stars" ||
       category === "price" ||
-      category === "reviewScore"
+      category === "reviewScore" ||
+      category === "distanceFromCenter" ||
+      category === "minDiscountPercentage" ||
+      category === "guestType" ||
+      category === "confidenceScore"
     ) {
       return; // These are not string array categories
     }
@@ -124,6 +175,12 @@ const HotelFilters: React.FC<HotelFiltersProps> = ({
 
   // Format price label
   const priceValueText = (value: number) => `$${value}`;
+
+  // Format distance label
+  const distanceValueText = (value: number) => `${value} mi`;
+
+  // Format discount percentage label
+  const discountValueText = (value: number) => `${value}%`;
 
   return (
     <Box sx={{ width: "100%", overflow: "hidden" }}>
@@ -380,6 +437,277 @@ const HotelFilters: React.FC<HotelFiltersProps> = ({
       </Accordion>
       <Divider />
 
+      {/* Distance from Center */}
+      <Accordion
+        expanded={expanded === "distance"}
+        onChange={handleAccordionChange("distance")}
+        elevation={0}
+        disableGutters
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0 }}>
+          <Typography variant="subtitle1" fontWeight="medium">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <LocationOnIcon fontSize="small" sx={{ mr: 1 }} />
+              {t("hotelFilters.distance", "Distance from Center")}
+            </Box>
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0 }}>
+          <Box px={2}>
+            <Typography variant="body2" gutterBottom>
+              {t("hotelFilters.maxDistance", "Maximum Distance")}:{" "}
+              {filters.distanceFromCenter
+                ? `${filters.distanceFromCenter} miles`
+                : t("hotelFilters.any", "Any")}
+            </Typography>
+            <Slider
+              value={filters.distanceFromCenter || 0}
+              onChange={handleDistanceChange}
+              min={0}
+              max={maxDistanceFromCenter}
+              step={0.5}
+              marks
+              valueLabelDisplay="auto"
+              valueLabelFormat={distanceValueText}
+            />
+          </Box>
+        </AccordionDetails>
+      </Accordion>
+      <Divider />
+
+      {/* Minimum Discount */}
+      <Accordion
+        expanded={expanded === "discount"}
+        onChange={handleAccordionChange("discount")}
+        elevation={0}
+        disableGutters
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0 }}>
+          <Typography variant="subtitle1" fontWeight="medium">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <PercentIcon fontSize="small" sx={{ mr: 1 }} />
+              {t("hotelFilters.discount", "Minimum Discount")}
+            </Box>
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0 }}>
+          <Box px={2}>
+            <Typography variant="body2" gutterBottom>
+              {t("hotelFilters.minDiscount", "Minimum Discount")}:{" "}
+              {filters.minDiscountPercentage}%+
+            </Typography>
+            <Slider
+              value={filters.minDiscountPercentage}
+              onChange={handleDiscountPercentageChange}
+              min={0}
+              max={30}
+              step={5}
+              marks
+              valueLabelDisplay="auto"
+              valueLabelFormat={discountValueText}
+            />
+          </Box>
+        </AccordionDetails>
+      </Accordion>
+      <Divider />
+
+      {/* Offer Partners */}
+      <Accordion
+        expanded={expanded === "offerPartners"}
+        onChange={handleAccordionChange("offerPartners")}
+        elevation={0}
+        disableGutters
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0 }}>
+          <Typography variant="subtitle1" fontWeight="medium">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <StorefrontIcon fontSize="small" sx={{ mr: 1 }} />
+              {t("hotelFilters.offerPartners", "Offer Partners")}
+            </Box>
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0 }}>
+          <FormGroup>
+            {availablePartners.map((partner) => (
+              <FormControlLabel
+                key={partner}
+                control={
+                  <Checkbox
+                    checked={filters.offerPartners.includes(partner)}
+                    onChange={() =>
+                      handleCheckboxChange("offerPartners", partner)
+                    }
+                    size="small"
+                  />
+                }
+                label={<Typography variant="body2">{partner}</Typography>}
+              />
+            ))}
+          </FormGroup>
+        </AccordionDetails>
+      </Accordion>
+      <Divider />
+
+      {/* Tax Policy */}
+      <Accordion
+        expanded={expanded === "taxPolicy"}
+        onChange={handleAccordionChange("taxPolicy")}
+        elevation={0}
+        disableGutters
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0 }}>
+          <Typography variant="subtitle1" fontWeight="medium">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <AttachMoneyIcon fontSize="small" sx={{ mr: 1 }} />
+              {t("hotelFilters.taxPolicy", "Tax Policy")}
+            </Box>
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0 }}>
+          <FormGroup>
+            {[
+              {
+                value: "included",
+                label: t(
+                  "hotelFilters.taxIncluded",
+                  "All taxes and fees included"
+                ),
+              },
+              {
+                value: "excluded",
+                label: t("hotelFilters.taxExcluded", "Taxes and fees excluded"),
+              },
+              {
+                value: "payLater",
+                label: t("hotelFilters.payLater", "Pay at the property"),
+              },
+            ].map((option) => (
+              <FormControlLabel
+                key={option.value}
+                control={
+                  <Checkbox
+                    checked={filters.taxPolicy.includes(option.value)}
+                    onChange={() =>
+                      handleCheckboxChange("taxPolicy", option.value)
+                    }
+                    size="small"
+                  />
+                }
+                label={<Typography variant="body2">{option.label}</Typography>}
+              />
+            ))}
+          </FormGroup>
+        </AccordionDetails>
+      </Accordion>
+      <Divider />
+
+      {/* Guest Type */}
+      <Accordion
+        expanded={expanded === "guestType"}
+        onChange={handleAccordionChange("guestType")}
+        elevation={0}
+        disableGutters
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0 }}>
+          <Typography variant="subtitle1" fontWeight="medium">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <PersonIcon fontSize="small" sx={{ mr: 1 }} />
+              {t("hotelFilters.guestType", "Guest Type")}
+            </Box>
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0 }}>
+          <RadioGroup
+            value={filters.guestType || ""}
+            onChange={(e) => handleRadioChange("guestType", e)}
+          >
+            <FormControlLabel
+              value=""
+              control={<Radio size="small" />}
+              label={
+                <Typography variant="body2">
+                  {t("hotelFilters.any", "Any")}
+                </Typography>
+              }
+            />
+            <FormControlLabel
+              value="families"
+              control={<Radio size="small" />}
+              label={
+                <Typography variant="body2">
+                  {t("hotelFilters.families", "Families")}
+                </Typography>
+              }
+            />
+            <FormControlLabel
+              value="couples"
+              control={<Radio size="small" />}
+              label={
+                <Typography variant="body2">
+                  {t("hotelFilters.couples", "Couples")}
+                </Typography>
+              }
+            />
+            <FormControlLabel
+              value="business"
+              control={<Radio size="small" />}
+              label={
+                <Typography variant="body2">
+                  {t("hotelFilters.business", "Business")}
+                </Typography>
+              }
+            />
+            <FormControlLabel
+              value="solo"
+              control={<Radio size="small" />}
+              label={
+                <Typography variant="body2">
+                  {t("hotelFilters.solo", "Solo Traveler")}
+                </Typography>
+              }
+            />
+          </RadioGroup>
+        </AccordionDetails>
+      </Accordion>
+      <Divider />
+
+      {/* Location Rating */}
+      <Accordion
+        expanded={expanded === "locationRating"}
+        onChange={handleAccordionChange("locationRating")}
+        elevation={0}
+        disableGutters
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0 }}>
+          <Typography variant="subtitle1" fontWeight="medium">
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <PublicIcon fontSize="small" sx={{ mr: 1 }} />
+              {t("hotelFilters.locationRating", "Location Rating")}
+            </Box>
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0 }}>
+          <Box px={2}>
+            <Typography variant="body2" gutterBottom>
+              {t("hotelFilters.minScore", "Minimum Score")}:{" "}
+              {filters.confidenceScore
+                ? filters.confidenceScore
+                : t("hotelFilters.any", "Any")}
+            </Typography>
+            <Slider
+              value={filters.confidenceScore || 0}
+              onChange={handleConfidenceScoreChange}
+              min={0}
+              max={maxConfidenceScore}
+              step={0.5}
+              marks
+              valueLabelDisplay="auto"
+            />
+          </Box>
+        </AccordionDetails>
+      </Accordion>
+      <Divider />
+
       {/* Accommodation Type */}
       <Accordion
         expanded={expanded === "accommodationType"}
@@ -415,55 +743,6 @@ const HotelFilters: React.FC<HotelFiltersProps> = ({
                     checked={filters.accommodationType.includes(option.value)}
                     onChange={() =>
                       handleCheckboxChange("accommodationType", option.value)
-                    }
-                    size="small"
-                  />
-                }
-                label={<Typography variant="body2">{option.label}</Typography>}
-              />
-            ))}
-          </FormGroup>
-        </AccordionDetails>
-      </Accordion>
-      <Divider />
-
-      {/* Popular With */}
-      <Accordion
-        expanded={expanded === "popularWith"}
-        onChange={handleAccordionChange("popularWith")}
-        elevation={0}
-        disableGutters
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0 }}>
-          <Typography variant="subtitle1" fontWeight="medium">
-            {t("hotelFilters.popularWith", "Popular With")}
-          </Typography>
-        </AccordionSummary>
-        <AccordionDetails sx={{ px: 0 }}>
-          <FormGroup>
-            {[
-              {
-                value: "families",
-                label: t("hotelFilters.families", "Families"),
-              },
-              { value: "couples", label: t("hotelFilters.couples", "Couples") },
-              {
-                value: "solo",
-                label: t("hotelFilters.solo", "Solo Travelers"),
-              },
-              {
-                value: "business",
-                label: t("hotelFilters.business", "Business Travelers"),
-              },
-              { value: "groups", label: t("hotelFilters.groups", "Groups") },
-            ].map((option) => (
-              <FormControlLabel
-                key={option.value}
-                control={
-                  <Checkbox
-                    checked={filters.popularWith.includes(option.value)}
-                    onChange={() =>
-                      handleCheckboxChange("popularWith", option.value)
                     }
                     size="small"
                   />

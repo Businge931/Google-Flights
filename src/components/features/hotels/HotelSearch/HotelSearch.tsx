@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Box, Typography, Container, Paper, Tabs, Tab } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Container,
+  Paper,
+  Tabs,
+  Tab,
+  Button,
+} from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { useTranslation } from "react-i18next";
 import InfoIcon from "@mui/icons-material/Info";
@@ -15,7 +23,7 @@ const HotelSearch: React.FC = () => {
 
   const [filterValue, setFilterValue] = useState("recommended");
 
-  // Hotel filters state
+  // Hotel filters state with enhanced properties
   const [hotelFilters, setHotelFilters] = useState<HotelFiltersType>({
     price: [0, 1000],
     reviewScore: 7,
@@ -23,7 +31,12 @@ const HotelSearch: React.FC = () => {
     discounts: [],
     amenities: [],
     accommodationType: [],
-    popularWith: [],
+    distanceFromCenter: null,
+    minDiscountPercentage: 0,
+    offerPartners: [],
+    taxPolicy: [],
+    guestType: null,
+    confidenceScore: null,
   });
 
   const getHotelsByFilter = () => {
@@ -31,8 +44,8 @@ const HotelSearch: React.FC = () => {
 
     const filteredHotels = hotels.filter((hotel) => {
       // Price filter
-      const hotelPrice =
-        typeof hotel.price === "string" ? parseFloat(hotel.price) : hotel.price;
+      // Use rawPrice property directly from API data
+      const hotelPrice = hotel.rawPrice || 0;
       if (
         hotelPrice < hotelFilters.price[0] ||
         hotelPrice > hotelFilters.price[1]
@@ -41,6 +54,7 @@ const HotelSearch: React.FC = () => {
       }
 
       // Review score filter
+      // Extract review score from the API data
       const reviewScore = hotel.rating?.value
         ? parseFloat(hotel.rating.value)
         : 0;
@@ -57,11 +71,104 @@ const HotelSearch: React.FC = () => {
         return false;
       }
 
+      // Distance filter - actual API format: "0.7 miles from Eiffel Tower"
+      if (hotelFilters.distanceFromCenter !== null && hotel.distance) {
+        // Extract distance value from distance string
+        const distanceMatch = hotel.distance.match(/(\d+\.?\d*)/);
+        const distanceValue = distanceMatch ? parseFloat(distanceMatch[1]) : 0;
+        
+        if (distanceValue > hotelFilters.distanceFromCenter) {
+          return false;
+        }
+      }
+      
+      // Discount percentage filter using the API cug.rawDiscountPercentage property
+      if (hotelFilters.minDiscountPercentage > 0) {
+        const discountPercentage = hotel.cug?.rawDiscountPercentage || 0;
+        if (discountPercentage < hotelFilters.minDiscountPercentage) {
+          return false;
+        }
+      }
+      
+      // Offer partners filter using cheapestOfferPartnerName and otherRates
+      if (hotelFilters.offerPartners.length > 0) {
+        // First check the main partner
+        const hotelPartner = hotel.cheapestOfferPartnerName;
+        const mainPartnerMatches = hotelPartner && hotelFilters.offerPartners.includes(hotelPartner);
+        
+        if (!mainPartnerMatches) {
+          // If main partner doesn't match, check if any other partners match
+          const hasMatchingPartner = hotel.otherRates?.some(rate => 
+            rate.partnerName && hotelFilters.offerPartners.includes(rate.partnerName)
+          );
+          
+          if (!hasMatchingPartner) {
+            return false;
+          }
+        }
+      }
+      
+      // Tax policy filter using the API taxPolicy property
+      if (hotelFilters.taxPolicy.length > 0 && hotel.taxPolicy) {
+        const taxPolicy = hotel.taxPolicy.toLowerCase();
+        
+        const matches = hotelFilters.taxPolicy.some(policy => {
+          switch (policy) {
+            case 'included':
+              return taxPolicy.includes('included') || taxPolicy.includes('all taxes');
+            case 'excluded':
+              return taxPolicy.includes('excluded') || taxPolicy.includes('not included');
+            case 'payLater':
+              return taxPolicy.includes('pay later') || taxPolicy.includes('at the property');
+            default:
+              return false;
+          }
+        });
+        
+        if (!matches) {
+          return false;
+        }
+      }
+      
+      // Guest type filter using the API guestType property and confidence badge
+      if (hotelFilters.guestType && hotelFilters.guestType !== 'any') {
+        // First try direct match on guestType property
+        if (hotel.guestType && hotel.guestType === hotelFilters.guestType) {
+          return true;
+        }
+        
+        // Then try to match on confidence badge message
+        const confidenceBadgeMessage = hotel.reviewSummary?.confidenceBadge?.message?.toLowerCase() || '';
+        const guestTypeKeywords: Record<string, string[]> = {
+          'couples': ['couple', 'romance', 'romantic'],
+          'family': ['family', 'families', 'kids', 'children'],
+          'business': ['business', 'work', 'working'],
+          'solo': ['solo', 'alone', 'single traveler'],
+          'friends': ['friends', 'group']
+        };
+        
+        const keywords = guestTypeKeywords[hotelFilters.guestType] || [];
+        const guestTypeMatches = keywords.some(keyword => 
+          confidenceBadgeMessage.includes(keyword)
+        );
+        
+        if (!guestTypeMatches) {
+          return false;
+        }
+      }
+      
+      // Confidence score for location rating
+      if (hotelFilters.confidenceScore !== null) {
+        const locationScore = hotel.reviewSummary?.confidenceBadge?.score || 0;
+        if (locationScore < hotelFilters.confidenceScore) {
+          return false;
+        }
+      }
+
+      // Accommodation type filter using hotel name heuristics
       if (hotelFilters.accommodationType.length > 0) {
         const hotelName = hotel.name.toLowerCase();
         const matchesType = hotelFilters.accommodationType.some((type) => {
-          // Check if hotel name contains words that might indicate the type
-          // This is just a simple heuristic and not a proper solution
           switch (type) {
             case "hotel":
               return hotelName.includes("hotel");
@@ -75,6 +182,8 @@ const HotelSearch: React.FC = () => {
               return hotelName.includes("guest") || hotelName.includes("house");
             case "hostel":
               return hotelName.includes("hostel");
+            case "villa":
+              return hotelName.includes("villa");
             default:
               return false;
           }
@@ -90,12 +199,10 @@ const HotelSearch: React.FC = () => {
 
     switch (filterValue) {
       case "price":
-        // Sort by lowest price
+        // Sort by lowest price using rawPrice from API
         return [...filteredHotels].sort((a, b) => {
-          const priceA =
-            typeof a.price === "string" ? parseFloat(a.price) : a.price;
-          const priceB =
-            typeof b.price === "string" ? parseFloat(b.price) : b.price;
+          const priceA = a.rawPrice || 0;
+          const priceB = b.rawPrice || 0;
           return priceA - priceB;
         });
       case "reviews":
@@ -209,9 +316,37 @@ const HotelSearch: React.FC = () => {
                   top: 20,
                 }}
               >
-                <Typography variant="h6" gutterBottom>
-                  {t("hotelSearch.filters", "Filters")}
-                </Typography>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  <Typography variant="h6">
+                    {t("hotelSearch.filters", "Filters")}
+                  </Typography>
+                  <Button 
+                    variant="outlined" 
+                    size="small" 
+                    color="primary"
+                    onClick={() => {
+                      const calculatedMaxPrice = hotels.length > 0 
+                        ? Math.max(...hotels.map(hotel => hotel.rawPrice || 0)) + 100 
+                        : 1000;
+                      setHotelFilters({
+                        price: [0, calculatedMaxPrice],
+                        reviewScore: 7,
+                        stars: [],
+                        discounts: [],
+                        amenities: [],
+                        accommodationType: [],
+                        distanceFromCenter: null,
+                        minDiscountPercentage: 0,
+                        offerPartners: [],
+                        taxPolicy: [],
+                        guestType: null,
+                        confidenceScore: null,
+                      });
+                    }}
+                  >
+                    {t("hotelFilters.clearAll", "Clear All")}
+                  </Button>
+                </Box>
                 <Box
                   sx={{ maxHeight: "calc(100vh - 180px)", overflowY: "auto" }}
                 >
@@ -219,7 +354,13 @@ const HotelSearch: React.FC = () => {
                     filters={hotelFilters}
                     onChange={setHotelFilters}
                     minPrice={0}
-                    maxPrice={1000}
+                    maxPrice={hotels.length > 0 ? Math.max(...hotels.map(hotel => hotel.rawPrice || 0)) + 100 : 1000}
+                    availablePartners={Array.from(new Set(hotels.flatMap(hotel => [
+                      hotel.cheapestOfferPartnerName,
+                      ...(hotel.otherRates?.map(rate => rate.partnerName) || [])
+                    ]).filter(Boolean)))}
+                    maxDistanceFromCenter={15}
+                    maxConfidenceScore={5}
                   />
                 </Box>
               </Paper>
