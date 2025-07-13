@@ -350,7 +350,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
         </Stack>
 
         {/* Search Button - Centered */}
-        <Box sx={{ display: "flex", justifyContent: "space-evenly", mt: 1 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
           <CustomButton
             variant="contained"
             color="primary"
@@ -366,22 +366,6 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
             }}
           >
             {loading ? "Searching..." : "Search Flights"}
-          </CustomButton>
-
-          <CustomButton
-            variant="outlined"
-            color="primary"
-            size="large"
-            onClick={() => {}}
-            fullWidth
-            sx={{
-              mt: 2,
-              py: 1,
-              width: { xs: "100%", sm: "auto" },
-              minWidth: { sm: "200px" },
-            }}
-          >
-            Get Price Calender
           </CustomButton>
         </Box>
       </Box>
