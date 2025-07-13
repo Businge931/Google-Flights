@@ -7,6 +7,8 @@ import {
   Popover,
   TextField,
   Typography,
+  Autocomplete,
+  CircularProgress,
 } from "@mui/material";
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -18,6 +20,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { HotelSearchFormData } from "./schema";
 import { hotelSearchSchema, defaultFormValues } from "./schema";
 import { useHotelContext } from "../../../../hooks/useHotelContext";
+import { useHotelDestinationSearch } from "../../../../hooks/useHotelDestinationSearch";
+import type { HotelDestination } from "../../../../services/hotelService";
 
 const HotelSearchForm: React.FC = () => {
   const {
@@ -36,6 +40,11 @@ const HotelSearchForm: React.FC = () => {
   const children = watch("children");
   const rooms = watch("rooms");
 
+  // Use custom hook for destination search
+  const { loading, options, search } = useHotelDestinationSearch();
+  const [selectedDestination, setSelectedDestination] =
+    useState<HotelDestination | null>(null);
+
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const guestsPopoverOpen = Boolean(anchorEl);
 
@@ -53,12 +62,16 @@ const HotelSearchForm: React.FC = () => {
     setAnchorEl(null);
   };
 
-  // Get hotel search function from context
   const { searchHotels } = useHotelContext();
 
-  // Form submission handler
   const onSubmit = (data: HotelSearchFormData) => {
-    searchHotels(data);
+    // Include the entityId from the selected destination
+    const searchData = {
+      ...data,
+      // Pass the entityId if a destination was selected
+      entityId: selectedDestination?.entityId,
+    };
+    searchHotels(searchData);
   };
 
   const updateAdults = (newValue: number) => {
@@ -102,15 +115,60 @@ const HotelSearchForm: React.FC = () => {
             name="destination"
             control={control}
             render={({ field }) => (
-              <TextField
+              <Autocomplete
                 {...field}
                 fullWidth
-                variant="outlined"
-                label="Where would you like to stay?"
-                size="small"
-                error={!!errors.destination}
-                helperText={errors.destination?.message}
-                sx={{ mr: 1 }}
+                options={options}
+                loading={loading}
+                value={selectedDestination}
+                onChange={(_, newValue) => {
+                  setSelectedDestination(newValue);
+                  field.onChange(newValue ? newValue.entityName : "");
+                }}
+                onInputChange={(_, newInputValue) => {
+                  search(newInputValue);
+                  field.onChange(newInputValue);
+                }}
+                getOptionLabel={(option) =>
+                  typeof option === "string" ? option : option.entityName
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Where would you like to stay?"
+                    variant="outlined"
+                    size="small"
+                    error={!!errors.destination}
+                    helperText={errors.destination?.message}
+                    sx={{ mr: 1 }}
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <React.Fragment>
+                          {loading ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
+                          {params.InputProps.endAdornment}
+                        </React.Fragment>
+                      ),
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props} key={option.entityId}>
+                    <Box>
+                      <Typography variant="body1">
+                        {option.entityName}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {option.hierarchy}
+                      </Typography>
+                    </Box>
+                  </li>
+                )}
+                isOptionEqualToValue={(option, value) =>
+                  option.entityId === value?.entityId
+                }
               />
             )}
           />

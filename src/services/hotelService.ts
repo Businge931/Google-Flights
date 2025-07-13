@@ -1,30 +1,117 @@
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
+import { formatDate } from "../utils/dateUtils";
 import type { HotelSearchFormData } from "../components/features/hotels/HotelSearchForm/schema";
-import type { 
-  HotelSearchParams, 
+import type {
+  HotelSearchParams,
   HotelSearchResponse,
   HotelDetailsParams,
-  HotelDetailsResponse 
+  HotelDetailsResponse,
 } from "../types/hotel";
 
-// Format the date to YYYY-MM-DD format required by the API
-const formatDate = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+// API Configuration
+const API_CONFIG = {
+  BASE_URL: "https://sky-scrapper.p.rapidapi.com/api/v1/hotels",
+  ENDPOINTS: {
+    SEARCH_DESTINATIONS: "/searchDestinationOrHotel",
+    SEARCH_HOTELS: "/searchHotels",
+    HOTEL_DETAILS: "/getHotelDetails",
+  },
 };
 
 /**
- * Searches for hotels based on the provided search parameters
+ * Get headers for API requests
+ */
+const getApiHeaders = () => ({
+  "X-RapidAPI-Key": import.meta.env.VITE_RAPIDAPI_KEY,
+  "X-RapidAPI-Host": "sky-scrapper.p.rapidapi.com",
+});
+
+/**
+ * Make a request to the Sky Scrapper API
+ * @template T The expected response type
+ * @param endpoint API endpoint
+ * @param params Request parameters
+ * @returns Promise with API response
+ */
+const makeApiRequest = async <T>(
+  endpoint: string,
+  params: Record<string, unknown>
+): Promise<T> => {
+  const config: AxiosRequestConfig = {
+    url: `${API_CONFIG.BASE_URL}${endpoint}`,
+    params,
+    headers: getApiHeaders(),
+    method: "GET",
+  };
+
+  try {
+    const response = await axios(config);
+    return response.data as T;
+  } catch (error) {
+    console.error(`Error in API request to ${endpoint}:`, error);
+    // Rethrow with more context
+    if (axios.isAxiosError(error)) {
+      throw new Error(`API request to ${endpoint} failed: ${error.message}`);
+    }
+    throw new Error(`API request to ${endpoint} failed with unexpected error`);
+  }
+};
+
+/**
+ * Interface for hotel destination search response
+ */
+export interface HotelDestination {
+  hierarchy: string;
+  location: string;
+  score: number;
+  entityName: string;
+  entityId: string;
+  entityType: string;
+  suggestItem: string;
+  class: string;
+  pois: null | unknown;
+}
+
+export interface HotelDestinationSearchResponse {
+  status: boolean;
+  timestamp: number;
+  data: HotelDestination[];
+}
+
+/**
+ * Search for hotel destinations or hotels by query
+ * @param query Search query text
+ * @returns Promise with destination search results
+ */
+export const searchDestinations = async (
+  query: string
+): Promise<HotelDestinationSearchResponse> => {
+  try {
+    return await makeApiRequest<HotelDestinationSearchResponse>(
+      API_CONFIG.ENDPOINTS.SEARCH_DESTINATIONS,
+      { query }
+    );
+  } catch (error) {
+    console.error("Error searching for destinations:", error);
+    throw new Error(
+      `Destination search failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
+};
+
+/**
+ * Search for hotels based on the provided search parameters
+ * @param formData Form data with search parameters
+ * @returns Promise with hotel search results
  */
 export const searchHotels = async (
   formData: HotelSearchFormData
 ): Promise<HotelSearchResponse> => {
   try {
-    // Extract entityId from destination string - in a real app, this would be extracted from a selected option
-    // For now, we'll use a default value of "27544008" for London
-    const entityId = "27544008"; // Default to London for this example
+    // Use entityId from the form data or default to London (27544008)
+    const entityId = formData.entityId || "27544008";
 
     const params: HotelSearchParams = {
       entityId,
@@ -40,62 +127,48 @@ export const searchHotels = async (
       countryCode: "US",
     };
 
-    const response = await axios.get(
-      "https://sky-scrapper.p.rapidapi.com/api/v1/hotels/searchHotels",
-      {
-        params,
-        headers: {
-          "X-RapidAPI-Key": import.meta.env.VITE_RAPIDAPI_KEY,
-          "X-RapidAPI-Host": "sky-scrapper.p.rapidapi.com",
-        },
-      }
+    return await makeApiRequest<HotelSearchResponse>(
+      API_CONFIG.ENDPOINTS.SEARCH_HOTELS,
+      params
     );
-
-    return response.data;
   } catch (error) {
     console.error("Error searching for hotels:", error);
-    throw error;
+    throw new Error(
+      `Hotel search failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 };
 
 /**
  * Get detailed information about a specific hotel
- * @param hotelId - The unique ID of the hotel
- * @param entityId - The entity ID (city/location) where the hotel is located
- * @param options - Optional parameters like currency, market, and countryCode
+ * @param options - The hotel details parameters
+ * @returns Promise with hotel details response
  */
 export const getHotelDetails = async (
-  hotelId: string,
-  entityId: string,
-  options: {
-    currency?: string;
-    market?: string;
-    countryCode?: string;
-  } = {}
+  options: HotelDetailsParams
 ): Promise<HotelDetailsResponse> => {
   try {
+    // Set up the request parameters
     const params: HotelDetailsParams = {
-      hotelId,
-      entityId,
+      hotelId: options.hotelId,
+      entityId: options.entityId,
       currency: options.currency || "USD",
       market: options.market || "en-US",
       countryCode: options.countryCode || "US",
     };
 
-    const response = await axios.get(
-      "https://sky-scrapper.p.rapidapi.com/api/v1/hotels/getHotelDetails",
-      {
-        params,
-        headers: {
-          "X-RapidAPI-Key": import.meta.env.VITE_RAPIDAPI_KEY,
-          "X-RapidAPI-Host": "sky-scrapper.p.rapidapi.com",
-        },
-      }
+    return await makeApiRequest<HotelDetailsResponse>(
+      API_CONFIG.ENDPOINTS.HOTEL_DETAILS,
+      params
     );
-
-    return response.data;
   } catch (error) {
     console.error("Error fetching hotel details:", error);
-    throw error;
+    throw new Error(
+      `Hotel details fetch failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 };

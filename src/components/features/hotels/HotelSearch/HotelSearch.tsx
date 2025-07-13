@@ -168,7 +168,7 @@ const HotelSearch: React.FC = () => {
         <Paper
           elevation={2}
           sx={{
-            position: "sticky",
+            position: { xs: "static", md: "sticky" },
             top: 0,
             zIndex: 10,
             mb: 3,

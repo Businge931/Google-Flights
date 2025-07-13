@@ -10,6 +10,7 @@ export interface HotelSearchParams {
   currency?: string;
   market?: string;
   countryCode?: string;
+  [key: string]: string | number | undefined;
 }
 
 export interface HotelSearchResponse {
@@ -118,6 +119,7 @@ export interface HotelDetailsParams {
   currency?: string;
   market?: string;
   countryCode?: string;
+  [key: string]: string | undefined;
 }
 
 export interface HotelDetailsResponse {

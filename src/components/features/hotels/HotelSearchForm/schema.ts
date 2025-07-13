@@ -3,6 +3,7 @@ import { z } from "zod";
 // Schema for hotel search form validation
 export const hotelSearchSchema = z.object({
   destination: z.string().min(1, "Destination is required"),
+  entityId: z.string().optional(),
   checkIn: z.date()
     .refine((date) => {
       // Check that the date is today or in the future
@@ -36,6 +37,7 @@ export type HotelSearchFormData = z.infer<typeof hotelSearchSchema>;
 // Default form values
 export const defaultFormValues: HotelSearchFormData = {
   destination: "City of London",
+  entityId: "27544008", // Default to London
   checkIn: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
   checkOut: new Date(new Date().getTime() + 10 * 24 * 60 * 60 * 1000), // 10 days from now
   adults: 2,

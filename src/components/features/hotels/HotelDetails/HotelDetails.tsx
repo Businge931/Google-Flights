@@ -68,7 +68,10 @@ const HotelDetails: React.FC = () => {
 
       try {
         setLoading(true);
-        const response = await getHotelDetails(hotelId, hotelName || "");
+        const response = await getHotelDetails({
+          hotelId,
+          entityId: hotelName || ""
+        });
         if (response.status) {
           setHotelDetails(response.data);
         } else {
