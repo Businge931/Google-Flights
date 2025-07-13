@@ -26,7 +26,6 @@ import {
 } from "react-router-dom";
 import FlightDetails from "./components/features/flightDetails/FlightDetails/FlightDetails";
 import HotelSearch from "./components/features/hotels/HotelSearch/HotelSearch";
-import CarRentalSearch from "./components/features/cars/CarRentalSearch/CarRentalSearch";
 import HotelDetails from "./components/features/hotels/HotelDetails";
 
 function FlightResultsContainer() {
@@ -74,8 +73,6 @@ function MainContent() {
           <HotelSearch />
         </HotelProvider>
       );
-    case "cars":
-      return <CarRentalSearch />;
     default:
       return <FlightsTabContent />;
   }
