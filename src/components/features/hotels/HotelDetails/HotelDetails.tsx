@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Box,
   Container,
@@ -12,14 +12,12 @@ import {
   ImageListItem,
   Rating,
   Alert,
+  Grid,
 } from "@mui/material";
-import Grid from "@mui/material/Grid";
 import { useParams, useNavigate } from "react-router-dom";
 import { getHotelDetails } from "../../../../services/hotelService";
 import type { HotelDetails as HotelDetailsType } from "../../../../types/hotel";
 import { useTranslation } from "react-i18next";
-import PlaceIcon from "@mui/icons-material/Place";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import WifiIcon from "@mui/icons-material/Wifi";
 import PoolIcon from "@mui/icons-material/Pool";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -29,6 +27,19 @@ import LocalParkingIcon from "@mui/icons-material/LocalParking";
 import PetsIcon from "@mui/icons-material/Pets";
 import AcUnitIcon from "@mui/icons-material/AcUnit";
 import { useNotification } from "../../../../hooks/useNotification";
+import HotelMap from "../Map/HotelMap";
+import { fetchNearbyMapData } from "../../../../services/hotelMapService";
+import { type NearbyMapData } from "../../../../types/nearbyMap";
+import {
+  useUserLocation,
+  getBrowserSettings,
+} from "../../../../services/locationService";
+import DirectionsIcon from "@mui/icons-material/Directions";
+import AttractionsIcon from "@mui/icons-material/Attractions";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import CommuteIcon from "@mui/icons-material/Commute";
+import PlaceIcon from "@mui/icons-material/Place";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
 // Map of amenity icons by keyword
 const amenityIconMap: Record<string, React.ReactNode> = {
@@ -53,8 +64,45 @@ const HotelDetails: React.FC = () => {
   );
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [nearbyMapData, setNearbyMapData] = useState<NearbyMapData | null>(
+    null
+  );
+  const [loadingMapData, setLoadingMapData] = useState<boolean>(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const { showNotification } = useNotification();
   const navigate = useNavigate();
+
+  const { userLocation } = useUserLocation();
+
+  const fetchNearbyPOIs = useCallback(
+    async (latitude: number, longitude: number) => {
+      try {
+        setLoadingMapData(true);
+        setMapError(null);
+
+        const browserSettings = getBrowserSettings();
+
+        const data = await fetchNearbyMapData({
+          cityId: hotelId || "",
+          latitude: latitude,
+          longitude: longitude,
+          market: userLocation?.language || browserSettings.language,
+          countryCode: userLocation?.countryCode || browserSettings.countryCode,
+        });
+
+        setNearbyMapData(data);
+      } catch (err) {
+        console.error("Error fetching nearby POIs:", err);
+        setMapError(
+          t("hotelDetails.mapError", "Could not load nearby points of interest")
+        );
+      } finally {
+        setLoadingMapData(false);
+      }
+    },
+    [hotelId, t, setMapError, setNearbyMapData, setLoadingMapData, userLocation]
+  );
 
   useEffect(() => {
     const fetchHotelDetails = async () => {
@@ -70,10 +118,20 @@ const HotelDetails: React.FC = () => {
         setLoading(true);
         const response = await getHotelDetails({
           hotelId,
-          entityId: hotelName || ""
+          entityId: hotelName || "",
         });
         if (response.status) {
           setHotelDetails(response.data);
+
+          if (
+            response.data.location?.coordinates?.latitude &&
+            response.data.location?.coordinates?.longitude
+          ) {
+            fetchNearbyPOIs(
+              response.data.location.coordinates.latitude,
+              response.data.location.coordinates.longitude
+            );
+          }
         } else {
           setError(
             t("hotelDetails.fetchError", "Failed to fetch hotel details")
@@ -104,9 +162,8 @@ const HotelDetails: React.FC = () => {
     };
 
     fetchHotelDetails();
-  }, [hotelId, hotelName, showNotification, t]);
+  }, [hotelId, hotelName, showNotification, t, fetchNearbyPOIs]);
 
-  // Find the right icon for an amenity description
   const getAmenityIcon = (description: string) => {
     const key = Object.keys(amenityIconMap).find((keyword) =>
       description.includes(keyword)
@@ -434,24 +491,62 @@ const HotelDetails: React.FC = () => {
               </Typography>
             )}
 
-            {/* Map could be added here */}
+            {/* Interactive Map */}
             <Box
               sx={{
-                height: 200,
-                bgcolor: "action.hover",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
+                height: 250,
                 borderRadius: 1,
                 my: 2,
+                overflow: "hidden",
               }}
             >
-              <Typography variant="body2" color="text.secondary">
-                {t(
-                  "hotelDetails.mapPlaceholder",
-                  "Map would be displayed here"
-                )}
-              </Typography>
+              {loadingMapData ? (
+                <Box
+                  sx={{
+                    height: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <CircularProgress size={28} />
+                </Box>
+              ) : mapError ? (
+                <Box
+                  sx={{
+                    height: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography variant="body2" color="error">
+                    {mapError}
+                  </Typography>
+                </Box>
+              ) : (
+                <HotelMap
+                  initialCenter={
+                    hotelDetails?.location?.coordinates
+                      ? {
+                          lat: hotelDetails.location.coordinates.latitude,
+                          lng: hotelDetails.location.coordinates.longitude,
+                        }
+                      : undefined
+                  }
+                  selectedLocation={
+                    hotelDetails?.location?.coordinates
+                      ? {
+                          lat: hotelDetails.location.coordinates.latitude,
+                          lng: hotelDetails.location.coordinates.longitude,
+                        }
+                      : undefined
+                  }
+                  nearbyData={nearbyMapData || undefined}
+                  height="100%"
+                  interactive={false}
+                />
+              )}
             </Box>
 
             <Button
@@ -473,6 +568,55 @@ const HotelDetails: React.FC = () => {
             </Button>
 
             <Divider sx={{ my: 3 }} />
+
+            {/* Nearby Points of Interest and Transportation */}
+            {nearbyMapData && (
+              <>
+                <Typography variant="h6" gutterBottom>
+                  <AttractionsIcon sx={{ mr: 1, verticalAlign: "middle" }} />
+                  {t("hotelDetails.nearbyAttractions", "Nearby Attractions")}
+                </Typography>
+
+                {nearbyMapData.poiInfo.slice(0, 3).map((poi) => (
+                  <Box key={poi.entityId} sx={{ mb: 1.5 }}>
+                    <Typography variant="subtitle2">{poi.poiName}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      <LocationOnIcon
+                        sx={{ fontSize: 16, verticalAlign: "text-bottom" }}
+                      />
+                      {poi.distanceFromHotel}
+                    </Typography>
+                  </Box>
+                ))}
+
+                <Typography variant="h6" sx={{ mt: 2 }} gutterBottom>
+                  <CommuteIcon sx={{ mr: 1, verticalAlign: "middle" }} />
+                  {t("hotelDetails.transportation", "Transportation")}
+                </Typography>
+
+                {nearbyMapData.transportations.slice(0, 3).map((transport) => (
+                  <Box key={transport.id} sx={{ mb: 1.5 }}>
+                    <Typography variant="subtitle2">
+                      {transport.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      <DirectionsIcon
+                        sx={{ fontSize: 16, verticalAlign: "text-bottom" }}
+                      />
+                      {transport.distanceFromHotel} ({transport.type})
+                    </Typography>
+                  </Box>
+                ))}
+
+                {nearbyMapData.nearestTransportation && (
+                  <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
+                    {nearbyMapData.nearestTransportation.description}
+                  </Alert>
+                )}
+
+                <Divider sx={{ my: 3 }} />
+              </>
+            )}
 
             {/* Book now section */}
             <Button

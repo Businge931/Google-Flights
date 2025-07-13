@@ -7,6 +7,7 @@ import type {
   HotelDetailsParams,
   HotelDetailsResponse,
 } from "../types/hotel";
+import { getBrowserSettings } from "./locationService";
 
 // API Configuration
 const API_CONFIG = {
@@ -112,6 +113,9 @@ export const searchHotels = async (
   try {
     // Use entityId from the form data or default to London (27544008)
     const entityId = formData.entityId || "27544008";
+    
+    // Get browser settings for localization
+    const browserSettings = getBrowserSettings();
 
     const params: HotelSearchParams = {
       entityId,
@@ -122,9 +126,9 @@ export const searchHotels = async (
       children: formData.children,
       limit: 30,
       sorting: "-relevance",
-      currency: "USD",
-      market: "en-US",
-      countryCode: "US",
+      currency: browserSettings.currency,
+      market: browserSettings.language,
+      countryCode: browserSettings.countryCode,
     };
 
     return await makeApiRequest<HotelSearchResponse>(
@@ -150,13 +154,16 @@ export const getHotelDetails = async (
   options: HotelDetailsParams
 ): Promise<HotelDetailsResponse> => {
   try {
+    // Get browser settings for localization
+    const browserSettings = getBrowserSettings();
+    
     // Set up the request parameters
     const params: HotelDetailsParams = {
       hotelId: options.hotelId,
       entityId: options.entityId,
-      currency: options.currency || "USD",
-      market: options.market || "en-US",
-      countryCode: options.countryCode || "US",
+      currency: options.currency || browserSettings.currency,
+      market: options.market || browserSettings.language,
+      countryCode: options.countryCode || browserSettings.countryCode,
     };
 
     return await makeApiRequest<HotelDetailsResponse>(

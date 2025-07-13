@@ -1,4 +1,5 @@
 import { fetchWithCache } from "./api";
+import { getBrowserSettings } from "./locationService";
 import type { 
   FlightDetailsParams, 
   FlightDetailsResponse 
@@ -11,6 +12,9 @@ export async function getFlightDetails(
   params: FlightDetailsParams,
   signal?: AbortSignal
 ): Promise<FlightDetailsResponse> {
+  // Get browser settings for localization
+  const browserSettings = getBrowserSettings();
+  
   // Build legs query parameter (needs to be a JSON string)
   const legs = encodeURIComponent(JSON.stringify(params.legs));
 
@@ -30,29 +34,32 @@ export async function getFlightDetails(
     queryParams.append("adults", params.adults.toString());
   }
   
-  if (params.currency) {
-    queryParams.append("currency", params.currency);
-  }
+  // Use provided values or browser defaults for localization
+  const currency = params.currency || browserSettings.currency;
+  queryParams.append("currency", currency);
   
-  if (params.locale) {
-    queryParams.append("locale", params.locale);
-  }
+  const locale = params.locale || browserSettings.language;
+  queryParams.append("locale", locale);
   
-  if (params.market) {
-    queryParams.append("market", params.market);
-  }
+  const market = params.market || browserSettings.language;
+  queryParams.append("market", market);
   
   if (params.cabinClass) {
     queryParams.append("cabinClass", params.cabinClass);
   }
   
-  if (params.countryCode) {
-    queryParams.append("countryCode", params.countryCode);
-  }
+  const countryCode = params.countryCode || browserSettings.countryCode;
+  queryParams.append("countryCode", countryCode);
 
   // Make API call
-  return fetchWithCache<FlightDetailsResponse>(
-    `/v1/flights/getFlightDetails?${queryParams.toString()}`,
-    { signal }
-  );
+  try {
+    const response = await fetchWithCache<FlightDetailsResponse>(
+      `/v1/flights/getFlightDetails?${queryParams.toString()}`,
+      { signal }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching flight details:", error);
+    throw error;
+  }
 }

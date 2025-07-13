@@ -29,6 +29,7 @@ import {
   formatDateForDisplay,
 } from "../../../../utils/dateUtils";
 import { useTranslation } from "react-i18next";
+import { getBrowserSettings } from "../../../../services/locationService";
 import { useNavigate, useParams } from "react-router-dom";
 import type { FlightResult } from "../../../../types/flight";
 
@@ -36,7 +37,9 @@ interface FlightDetailsProps {
   flightId?: string;
 }
 
-const FlightDetails: React.FC<FlightDetailsProps> = ({ flightId: propFlightId }) => {
+const FlightDetails: React.FC<FlightDetailsProps> = ({
+  flightId: propFlightId,
+}) => {
   const {
     selectedFlightId,
     selectedFlightDetails,
@@ -49,26 +52,20 @@ const FlightDetails: React.FC<FlightDetailsProps> = ({ flightId: propFlightId })
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  
-  // Get flightId from URL params if available
+
   const { flightId: urlFlightId } = useParams<{ flightId: string }>();
-  
-  // Get the flight ID from props, URL params, or context (in that order of priority)
+
   const currentFlightId = propFlightId || urlFlightId || selectedFlightId;
 
-  // Find the selected flight from search results for basic info
   const flight = searchResults?.find((f) => f.id === currentFlightId) || null;
 
-  // Load flight details only on mount or when flightId changes, and only if not already failed
   useEffect(() => {
     if (currentFlightId && !flightDetailsError) {
-      // Only load flight details if we haven't already encountered an error
       loadFlightDetails(currentFlightId);
       console.log("Loading flight details for ID:", currentFlightId);
     }
   }, [currentFlightId, loadFlightDetails, flightDetailsError]);
 
-  // Handle back button click
   const handleBackClick = () => {
     navigate("/");
   };
@@ -133,16 +130,19 @@ const FlightDetails: React.FC<FlightDetailsProps> = ({ flightId: propFlightId })
   // Get flight legs from detailed data
   const legs = flightData?.legs || [];
   const pricingOptions = flightData?.pricingOptions || [];
-  
+
   // Safely access flight price data with null checks
-  const bestPrice = pricingOptions.length > 0
-    ? pricingOptions[0].totalPrice
-    : flight?.price?.amount || 0;
-    
+  const bestPrice =
+    pricingOptions.length > 0
+      ? pricingOptions[0].totalPrice
+      : flight?.price?.amount || 0;
+
   // Use 'formatted' property which has the currency symbol, or extract currency code if available
+  // If not available, use browser currency settings
+  const browserSettings = getBrowserSettings();
   const currency = flight?.price?.formatted
     ? flight.price.formatted.replace(/[0-9,.]/g, "").trim()
-    : "USD";
+    : browserSettings.currency;
 
   return (
     <Container
@@ -550,14 +550,18 @@ const FlightDetails: React.FC<FlightDetailsProps> = ({ flightId: propFlightId })
                 {flight.legs[flight.legs.length - 1]?.destination?.city || ""}
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                {flight.legs[0]?.departure ? formatDateForDisplay(flight.legs[0].departure) : ""}
-                {flight.legs.length > 1 && flight.legs[1]?.departure &&
+                {flight.legs[0]?.departure
+                  ? formatDateForDisplay(flight.legs[0].departure)
+                  : ""}
+                {flight.legs.length > 1 &&
+                  flight.legs[1]?.departure &&
                   ` - ${formatDateForDisplay(flight.legs[1].departure)}`}
               </Typography>
             </Box>
             <Box>
               <Typography variant="h5" color="primary">
-                {flight.price?.formatted || `${flight.price?.amount?.toFixed(2) || "0.00"}`}
+                {flight.price?.formatted ||
+                  `${flight.price?.amount?.toFixed(2) || "0.00"}`}
               </Typography>
               <Chip
                 label={

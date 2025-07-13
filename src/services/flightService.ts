@@ -3,6 +3,7 @@
  * Handles API calls for searching flights
  */
 import { fetchWithCache } from "./api";
+import { getBrowserSettings } from "./locationService";
 import type {
   FlightSearchParams,
   FlightSearchResponse,
@@ -19,6 +20,9 @@ export async function searchFlights(
   signal?: AbortSignal
 ): Promise<FlightSearchResponse> {
   try {
+    // Get browser settings for localization
+    const browserSettings = getBrowserSettings();
+    
     // Build query string from parameters
     const queryParams = new URLSearchParams();
 
@@ -43,10 +47,11 @@ export async function searchFlights(
       queryParams.append("limit", params.limit.toString());
     if (params.carriersIds)
       queryParams.append("carriersIds", params.carriersIds);
-    if (params.currency) queryParams.append("currency", params.currency);
-    if (params.market) queryParams.append("market", params.market);
-    if (params.countryCode)
-      queryParams.append("countryCode", params.countryCode);
+    
+    // Use provided values or browser defaults for localization
+    queryParams.append("currency", params.currency || browserSettings.currency);
+    queryParams.append("market", params.market || browserSettings.language);
+    queryParams.append("countryCode", params.countryCode || browserSettings.countryCode);
 
     const response = await fetchWithCache<FlightSearchResponse>(
       `/v2/flights/searchFlights?${queryParams.toString()}`,

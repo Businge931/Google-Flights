@@ -3,6 +3,7 @@
  * Handles API calls for airport search and autocomplete
  */
 import { fetchWithCache } from "./api";
+import { getBrowserSettings } from "./locationService";
 import type { AirportResponse, AirportOption } from "../types/airport";
 
 /**
@@ -20,10 +21,13 @@ export async function searchAirports(
   }
 
   try {
+    // Get browser settings for localization
+    const { language } = getBrowserSettings();
+    
     const response = await fetchWithCache<AirportResponse>(
       `/v1/flights/searchAirport?query=${encodeURIComponent(
         query
-      )}&locale=en-US`,
+      )}&locale=${language}`,
       { signal }
     );
 
@@ -60,8 +64,11 @@ export async function getNearbyAirports(
   nearby: AirportOption[];
 }> {
   try {
+    // Get browser settings for localization
+    const { language } = getBrowserSettings();
+    
     const response = await fetchWithCache(
-      `/v1/flights/getNearByAirports?lat=${lat}&lng=${lng}&locale=en-US`
+      `/v1/flights/getNearByAirports?lat=${lat}&lng=${lng}&locale=${language}`
     );
 
     interface NearbyAirportsResponse {

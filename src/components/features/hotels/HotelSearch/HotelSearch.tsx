@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -10,12 +10,19 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { useTranslation } from "react-i18next";
+import HotelMap, { type NearbyMapData } from "../Map/HotelMap";
+import { fetchNearbyMapData } from "../../../../services/hotelMapService";
 import InfoIcon from "@mui/icons-material/Info";
+import MyLocationIcon from "@mui/icons-material/MyLocation";
 import HotelSearchForm from "../HotelSearchForm/HotelSearchForm";
 import HotelResults from "../HotelResults/HotelSearchResults";
 import HotelFilters from "../HotelFilters/HotelFilters";
 import type { HotelFilters as HotelFiltersType } from "../HotelFilters/HotelFilters";
 import { useHotelContext } from "../../../../hooks/useHotelContext";
+import {
+  useUserLocation,
+  getBrowserSettings,
+} from "../../../../services/locationService";
 
 const HotelSearch: React.FC = () => {
   const { t } = useTranslation();
@@ -23,7 +30,6 @@ const HotelSearch: React.FC = () => {
 
   const [filterValue, setFilterValue] = useState("recommended");
 
-  // Hotel filters state with enhanced properties
   const [hotelFilters, setHotelFilters] = useState<HotelFiltersType>({
     price: [0, 1000],
     reviewScore: 7,
@@ -39,6 +45,85 @@ const HotelSearch: React.FC = () => {
     confidenceScore: null,
   });
 
+  const { userLocation, error: locationError } = useUserLocation();
+
+  const [selectedLocation, setSelectedLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [nearbyMapData, setNearbyMapData] = useState<NearbyMapData | null>(
+    null
+  );
+  const [loadingMapData, setLoadingMapData] = useState<boolean>(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  const handleLocationSelected = useCallback(
+    async (location: { lat: number; lng: number }) => {
+      setSelectedLocation(location);
+
+      try {
+        setLoadingMapData(true);
+        setMapError(null);
+
+        // Use the user's cityId if available, or determine based on selected coordinates
+        // In the future, will use reverse geocoding API to get accurate cityId
+        const cityId =
+          userLocation.cityId || userLocation.permissionGranted
+            ? userLocation.cityId
+            : "298184";
+
+        // Get browser settings to ensure correct localization
+        const { language, countryCode, currency } = getBrowserSettings();
+
+        const data = await fetchNearbyMapData({
+          cityId: cityId || "",
+          latitude: location.lat,
+          longitude: location.lng,
+          market: language,
+          countryCode: countryCode,
+          currency: currency,
+        });
+
+        setNearbyMapData(data);
+      } catch (error) {
+        console.error("Error fetching nearby map data:", error);
+        setMapError("Failed to load nearby points of interest");
+      } finally {
+        setLoadingMapData(false);
+      }
+    },
+    [
+      userLocation,
+      setSelectedLocation,
+      setLoadingMapData,
+      setMapError,
+      setNearbyMapData,
+    ]
+  );
+
+  useEffect(() => {
+    if (
+      userLocation &&
+      userLocation.latitude &&
+      userLocation.longitude &&
+      !selectedLocation
+    ) {
+      setSelectedLocation({
+        lat: userLocation.latitude,
+        lng: userLocation.longitude,
+      });
+
+      // If permission was granted, fetch nearby map data for user's location
+      if (userLocation.permissionGranted) {
+        handleLocationSelected({
+          lat: userLocation.latitude,
+          lng: userLocation.longitude,
+        });
+      }
+    }
+  }, [userLocation, handleLocationSelected, selectedLocation]);
+
+  // Filter hotels based on the current filter settings
   const getHotelsByFilter = () => {
     if (!hotels || hotels.length === 0) return [];
 
@@ -76,12 +161,12 @@ const HotelSearch: React.FC = () => {
         // Extract distance value from distance string
         const distanceMatch = hotel.distance.match(/(\d+\.?\d*)/);
         const distanceValue = distanceMatch ? parseFloat(distanceMatch[1]) : 0;
-        
+
         if (distanceValue > hotelFilters.distanceFromCenter) {
           return false;
         }
       }
-      
+
       // Discount percentage filter using the API cug.rawDiscountPercentage property
       if (hotelFilters.minDiscountPercentage > 0) {
         const discountPercentage = hotel.cug?.rawDiscountPercentage || 0;
@@ -89,74 +174,85 @@ const HotelSearch: React.FC = () => {
           return false;
         }
       }
-      
+
       // Offer partners filter using cheapestOfferPartnerName and otherRates
       if (hotelFilters.offerPartners.length > 0) {
         // First check the main partner
         const hotelPartner = hotel.cheapestOfferPartnerName;
-        const mainPartnerMatches = hotelPartner && hotelFilters.offerPartners.includes(hotelPartner);
-        
+        const mainPartnerMatches =
+          hotelPartner && hotelFilters.offerPartners.includes(hotelPartner);
+
         if (!mainPartnerMatches) {
           // If main partner doesn't match, check if any other partners match
-          const hasMatchingPartner = hotel.otherRates?.some(rate => 
-            rate.partnerName && hotelFilters.offerPartners.includes(rate.partnerName)
+          const hasMatchingPartner = hotel.otherRates?.some(
+            (rate) =>
+              rate.partnerName &&
+              hotelFilters.offerPartners.includes(rate.partnerName)
           );
-          
+
           if (!hasMatchingPartner) {
             return false;
           }
         }
       }
-      
+
       // Tax policy filter using the API taxPolicy property
       if (hotelFilters.taxPolicy.length > 0 && hotel.taxPolicy) {
         const taxPolicy = hotel.taxPolicy.toLowerCase();
-        
-        const matches = hotelFilters.taxPolicy.some(policy => {
+
+        const matches = hotelFilters.taxPolicy.some((policy) => {
           switch (policy) {
-            case 'included':
-              return taxPolicy.includes('included') || taxPolicy.includes('all taxes');
-            case 'excluded':
-              return taxPolicy.includes('excluded') || taxPolicy.includes('not included');
-            case 'payLater':
-              return taxPolicy.includes('pay later') || taxPolicy.includes('at the property');
+            case "included":
+              return (
+                taxPolicy.includes("included") ||
+                taxPolicy.includes("all taxes")
+              );
+            case "excluded":
+              return (
+                taxPolicy.includes("excluded") ||
+                taxPolicy.includes("not included")
+              );
+            case "payLater":
+              return (
+                taxPolicy.includes("pay later") ||
+                taxPolicy.includes("at the property")
+              );
             default:
               return false;
           }
         });
-        
+
         if (!matches) {
           return false;
         }
       }
-      
+
       // Guest type filter using the API guestType property and confidence badge
-      if (hotelFilters.guestType && hotelFilters.guestType !== 'any') {
-        // First try direct match on guestType property
+      if (hotelFilters.guestType && hotelFilters.guestType !== "any") {
         if (hotel.guestType && hotel.guestType === hotelFilters.guestType) {
           return true;
         }
-        
-        // Then try to match on confidence badge message
-        const confidenceBadgeMessage = hotel.reviewSummary?.confidenceBadge?.message?.toLowerCase() || '';
+
+        const confidenceBadgeMessage =
+          hotel.reviewSummary?.confidenceBadge?.message?.toLowerCase() || "";
         const guestTypeKeywords: Record<string, string[]> = {
-          'couples': ['couple', 'romance', 'romantic'],
-          'family': ['family', 'families', 'kids', 'children'],
-          'business': ['business', 'work', 'working'],
-          'solo': ['solo', 'alone', 'single traveler'],
-          'friends': ['friends', 'group']
+          couples: ["couple", "romance", "romantic"],
+          family: ["family", "families", "kids", "children"],
+          business: ["business", "work", "working"],
+          solo: ["solo", "alone", "single traveler"],
+          friends: ["friends", "group"],
         };
-        
+
         const keywords = guestTypeKeywords[hotelFilters.guestType] || [];
-        const guestTypeMatches = keywords.some(keyword => 
+        const guestTypeMatches = keywords.some((keyword) =>
           confidenceBadgeMessage.includes(keyword)
         );
-        
+
         if (!guestTypeMatches) {
           return false;
         }
       }
-      
+
       // Confidence score for location rating
       if (hotelFilters.confidenceScore !== null) {
         const locationScore = hotel.reviewSummary?.confidenceBadge?.score || 0;
@@ -316,18 +412,28 @@ const HotelSearch: React.FC = () => {
                   top: 20,
                 }}
               >
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 2,
+                  }}
+                >
                   <Typography variant="h6">
                     {t("hotelSearch.filters", "Filters")}
                   </Typography>
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
+                  <Button
+                    variant="outlined"
+                    size="small"
                     color="primary"
                     onClick={() => {
-                      const calculatedMaxPrice = hotels.length > 0 
-                        ? Math.max(...hotels.map(hotel => hotel.rawPrice || 0)) + 100 
-                        : 1000;
+                      const calculatedMaxPrice =
+                        hotels.length > 0
+                          ? Math.max(
+                              ...hotels.map((hotel) => hotel.rawPrice || 0)
+                            ) + 100
+                          : 1000;
                       setHotelFilters({
                         price: [0, calculatedMaxPrice],
                         reviewScore: 7,
@@ -354,11 +460,25 @@ const HotelSearch: React.FC = () => {
                     filters={hotelFilters}
                     onChange={setHotelFilters}
                     minPrice={0}
-                    maxPrice={hotels.length > 0 ? Math.max(...hotels.map(hotel => hotel.rawPrice || 0)) + 100 : 1000}
-                    availablePartners={Array.from(new Set(hotels.flatMap(hotel => [
-                      hotel.cheapestOfferPartnerName,
-                      ...(hotel.otherRates?.map(rate => rate.partnerName) || [])
-                    ]).filter(Boolean)))}
+                    maxPrice={
+                      hotels.length > 0
+                        ? Math.max(
+                            ...hotels.map((hotel) => hotel.rawPrice || 0)
+                          ) + 100
+                        : 1000
+                    }
+                    availablePartners={Array.from(
+                      new Set(
+                        hotels
+                          .flatMap((hotel) => [
+                            hotel.cheapestOfferPartnerName,
+                            ...(hotel.otherRates?.map(
+                              (rate) => rate.partnerName
+                            ) || []),
+                          ])
+                          .filter(Boolean)
+                      )
+                    )}
                     maxDistanceFromCenter={15}
                     maxConfidenceScore={5}
                   />
@@ -414,26 +534,92 @@ const HotelSearch: React.FC = () => {
               />
             </Grid>
 
-            {/* Right column - Map placeholder */}
+            {/* Right column - Interactive Map */}
             <Grid size={{ xs: 12, md: 3, lg: 3.5 }}>
               <Paper
                 elevation={1}
                 sx={{
                   position: "sticky",
                   top: 20,
-                  height: "500px",
                   display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
+                  flexDirection: "column",
                   backgroundColor: "#f5f5f5",
+                  overflow: "hidden",
+                  paddingBottom: 1,
                 }}
               >
-                <Typography variant="body1" color="text.secondary">
-                  {t(
-                    "hotelSearch.mapPlaceholder",
-                    "Map will be displayed here"
-                  )}
+                <Typography
+                  variant="subtitle1"
+                  sx={{ p: 2, fontWeight: "medium" }}
+                >
+                  {t("hotelSearch.selectLocation", "Select Location on Map")}
                 </Typography>
+
+                {mapError && (
+                  <Typography
+                    variant="body2"
+                    color="error"
+                    sx={{ px: 2, pb: 1 }}
+                  >
+                    {mapError}
+                  </Typography>
+                )}
+
+                <Box sx={{ px: 0, height: "450px" }}>
+                  {locationError && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {locationError}
+                      </Typography>
+                    </Box>
+                  )}
+                  <HotelMap
+                    initialCenter={selectedLocation || undefined}
+                    selectedLocation={selectedLocation || undefined}
+                    onLocationSelected={handleLocationSelected}
+                    nearbyData={nearbyMapData || undefined}
+                    height="100%"
+                    interactive={true}
+                  />
+                  {userLocation.permissionGranted && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<MyLocationIcon />}
+                      onClick={() => {
+                        if (userLocation.latitude && userLocation.longitude) {
+                          const location = {
+                            lat: userLocation.latitude,
+                            lng: userLocation.longitude,
+                          };
+                          setSelectedLocation(location);
+                          handleLocationSelected(location);
+                        }
+                      }}
+                      sx={{ mt: 2 }}
+                    >
+                      {t("hotelSearch.useMyLocation", "Use My Location")}
+                    </Button>
+                  )}
+                </Box>
+
+                {selectedLocation && (
+                  <Box sx={{ p: 2 }}>
+                    <Typography variant="body2">
+                      {loadingMapData
+                        ? t(
+                            "hotelSearch.loadingNearbyPlaces",
+                            "Loading nearby places..."
+                          )
+                        : nearbyMapData
+                        ? nearbyMapData.attractionsSummary
+                        : t(
+                            "hotelSearch.clickToLoadNearbyPlaces",
+                            "Click to see nearby places"
+                          )}
+                    </Typography>
+                  </Box>
+                )}
               </Paper>
             </Grid>
           </Grid>
