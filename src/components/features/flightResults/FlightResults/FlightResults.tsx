@@ -32,18 +32,12 @@ const FlightResults: React.FC<FlightResultsProps> = ({
   error,
   onSelectFlight,
 }) => {
-  // Pagination state
   const [page, setPage] = useState(1);
-  const ITEMS_PER_PAGE = 6;
-
-  // Sorting state
   const [sortBy, setSortBy] = useState<SortOption>("best");
-
-  // Use Material UI's responsive hooks
+  const ITEMS_PER_PAGE = 6;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // Filter state
   const [filters, setFilters] = useState<FlightFilters>({
     stops: [],
     airlines: [],
@@ -54,20 +48,23 @@ const FlightResults: React.FC<FlightResultsProps> = ({
     refundable: null,
     changeable: null,
   });
-  
+
   // Reset filters when new search results are loaded
   useEffect(() => {
     // Only reset when we get new results (not during initial render with empty results)
     if (results.length > 0) {
-      // Calculate new price range based on the actual results
-      const minPrice = Math.min(...results.map(flight => flight.price.amount));
-      const maxPrice = Math.max(...results.map(flight => flight.price.amount));
-      
-      // Calculate duration range based on actual flights
-      const durations = results.flatMap(flight => flight.legs.map(leg => leg.duration));
+      const minPrice = Math.min(
+        ...results.map((flight) => flight.price.amount)
+      );
+      const maxPrice = Math.max(
+        ...results.map((flight) => flight.price.amount)
+      );
+      const durations = results.flatMap((flight) =>
+        flight.legs.map((leg) => leg.duration)
+      );
       const minDuration = Math.min(...durations);
       const maxDuration = Math.max(...durations);
-      
+
       // Reset all filters to default values but keep dynamic ranges based on current results
       setFilters({
         stops: [],
@@ -79,7 +76,7 @@ const FlightResults: React.FC<FlightResultsProps> = ({
         refundable: null,
         changeable: null,
       });
-      
+
       // Also reset pagination when new search results arrive
       setPage(1);
     }
@@ -154,9 +151,6 @@ const FlightResults: React.FC<FlightResultsProps> = ({
         });
         if (!hasSelectedAirline) return false;
       }
-
-      // We don't have farePolicy in FlightResult type, so skip these filters
-      // If needed, these can be added when the API returns this data
 
       return true;
     });

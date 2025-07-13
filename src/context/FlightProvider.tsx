@@ -71,8 +71,8 @@ export const FlightProvider: React.FC<FlightProviderProps> = ({ children }) => {
           loading: false,
           error: undefined,
           sessionId:
-            response.data.flightsSessionId ||
-            response.data.context?.sessionId ||
+            response.data?.flightsSessionId ||
+            response.data?.context?.sessionId ||
             null,
         }));
 
